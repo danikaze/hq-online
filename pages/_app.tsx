@@ -6,14 +6,14 @@ import { store } from '@store';
 import { appWithTranslation } from '@utils/i18n';
 import { ThemeProvider } from '@material-ui/core/styles';
 import { CssBaseline } from '@material-ui/core';
-import { IsomorphicLogger, Logger, NsLogger } from '@utils/logger';
+import { getLogger, globalLogger, Logger, NsLogger } from '@utils/logger';
 import { theme } from '@themes';
 
 import '@styles/globals.css';
 
 export type AppPage<P = {}, IP = P> = NextPage<
   P & AppPageProps,
-  IP & AppPageProps
+  IP & Partial<AppPageProps>
 >;
 interface AppPageProps {
   namespacesRequired?: string[];
@@ -22,8 +22,6 @@ interface AppPageProps {
 interface WithInitialProps {
   getInitialProps?: NextComponentType<AppContext>['getInitialProps'];
 }
-
-const logger = new IsomorphicLogger(LOGGER_CONFIG);
 
 const App: FunctionComponent<NextAppProps<AppPageProps>> = ({
   Component,
@@ -36,7 +34,7 @@ const App: FunctionComponent<NextAppProps<AppPageProps>> = ({
   }, []);
 
   const loggerNamespace = `${Component.displayName || Component.name}Page`;
-  (pageProps as AppPageProps).logger = logger.getLogger(loggerNamespace);
+  (pageProps as AppPageProps).logger = getLogger(loggerNamespace);
 
   return (
     <>
@@ -48,7 +46,7 @@ const App: FunctionComponent<NextAppProps<AppPageProps>> = ({
         />
         <meta name="theme-color" content={theme.palette.primary.main} />
       </Head>
-      <Logger.Provider value={logger}>
+      <Logger.Provider value={globalLogger}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <Component {...pageProps} />

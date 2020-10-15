@@ -360,6 +360,7 @@ rules:
   semicolon:
     - true
     - always
+    - strict-bound-class-methods
 
   # https://palantir.github.io/tslint/rules/no-construct/
   no-construct: true
