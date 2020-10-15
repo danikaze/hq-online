@@ -1,0 +1,4 @@
+module.exports = {
+  GLOBAL_EXAMPLE: 'GLOBAL_EXAMPLE',
+  ENABLE_I18N_OPTIMIZED_NAMESPACES: true,
+};
