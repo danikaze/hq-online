@@ -137,7 +137,8 @@ function getLoggerConfig(isProduction, isServer) {
 
   try {
     const module = require(LOGGER_CONFIG_PATH);
-    const config = typeof module === 'function' ? module(isProduction) : module;
+    const config =
+      typeof module === 'function' ? module(isProduction, isServer) : module;
 
     if (!isServer) {
       // remove server logger options so they are not
