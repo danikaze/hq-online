@@ -19,36 +19,47 @@ const levelMethods: { [level in LoggerLevel]: keyof Console } = {
   debug: 'info',
 };
 
-const levelFormats: Partial<{ [level in LoggerLevel]: string }> = {
-  info: 'color: #0dbc79',
-  verbose: 'color: #199bcd',
-  debug: 'color: #1f57c8',
-};
-
 type ClientLoggerOptions = Omit<
   LoggerOptions,
   'outputFolder' | 'outputFile' | 'maxFiles'
 >;
 
+const noColors = [undefined, undefined, undefined, undefined];
+const noColorsMap = {
+  error: noColors,
+  warn: noColors,
+  info: noColors,
+  verbose: noColors,
+  debug: noColors,
+};
+const colorsMap = {
+  error: noColors,
+  warn: noColors,
+  info: ['color: #0dbc79', undefined, 'color: grey', undefined],
+  verbose: ['color: #199bcd', undefined, 'color: grey', undefined],
+  debug: ['color: #1f57c8', undefined, 'color: grey', undefined],
+};
+
 export class ClientLogger {
   private readonly silent: boolean;
   private readonly level: LoggerLevel;
-  private readonly colors: (string | undefined)[];
+  private readonly colors: { [level in LoggerLevel]: (string | undefined)[] };
+  private readonly addTimestamp: boolean;
   private readonly nsLoggers: { [namespace: string]: NsLogger } = {};
 
   constructor(options?: ClientLoggerOptions) {
-    const opt = {
+    const opt: Required<ClientLoggerOptions> = {
       level: (IS_PRODUCTION ? 'error' : 'debug') as LoggerLevel,
       silent: false,
       console: true,
       disableColors: false,
+      addTimestamp: true,
       ...options,
     };
     this.silent = opt.silent || !opt.console;
     this.level = opt.level;
-    this.colors = opt.disableColors
-      ? [undefined, undefined, undefined, undefined]
-      : [levelFormats[opt.level], undefined, 'color: grey', undefined];
+    this.addTimestamp = opt.addTimestamp;
+    this.colors = opt.disableColors ? noColorsMap : colorsMap;
   }
 
   public getLogger(namespace: string): NsLogger {
@@ -80,10 +91,10 @@ export class ClientLogger {
     }
 
     const method = levelMethods[level];
-    const time = new Date();
+    const time = this.addTimestamp ? `${new Date().toISOString()} ` : '';
     console[method](
-      `${time.toISOString()} [%c${level}%c | %c${namespace}%c]`,
-      ...this.colors,
+      `${time}[%c${level}%c | %c${namespace}%c]`,
+      ...this.colors[level],
       ...msgs
     );
   }
