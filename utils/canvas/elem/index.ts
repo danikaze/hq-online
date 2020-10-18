@@ -23,6 +23,21 @@ export type RequiredOptions = Rect2D &
     outlineStyle: ShapeStyle;
   };
 
+/**
+ * Optional methods of the abstract class `Elem2D`
+ * usually, when implementing them it's a good idea to have them like:
+ * ```ts
+ * public method = () => {
+ *   if (super.method) super.method();
+ *   // implementation here
+ * }
+ * ```
+ */
+export interface Elem2D {
+  beforeDraw?: () => void;
+  afterDraw?: () => void;
+}
+
 export abstract class Elem2D {
   public static readonly defaultOptions: RequiredOptions = {
     x: 0,
@@ -95,10 +110,13 @@ export abstract class Elem2D {
 
   public draw(outline?: boolean): void {
     this.ctx.save();
+    this.updateValues();
+    this.beforeDraw && this.beforeDraw!();
     this.applyLocalTransform();
 
     this.drawElem();
     outline && this.drawOutline();
+    this.afterDraw && this.afterDraw!();
 
     this.ctx.restore();
   }
