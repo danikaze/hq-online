@@ -16,6 +16,10 @@ export interface Centerable {
   centerX: number;
   centerY: number;
 }
+export interface Scalable {
+  scaleX: number;
+  scaleY: number;
+}
 export interface Transparentable {
   alpha: number;
 }

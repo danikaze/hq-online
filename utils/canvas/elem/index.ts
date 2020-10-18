@@ -6,6 +6,7 @@ import {
   Centerable,
   Rect2D,
   Rotatable,
+  Scalable,
   ShapeStyle,
   Transparentable,
   ZSortable,
@@ -16,6 +17,7 @@ export type Elem2dOptions = Partial<RequiredOptions>;
 export type RequiredOptions = Rect2D &
   ZSortable &
   Rotatable &
+  Scalable &
   Centerable &
   Transparentable & {
     outlineStyle: ShapeStyle;
@@ -28,6 +30,8 @@ export abstract class Elem2D {
     z: 0,
     width: 0,
     height: 0,
+    scaleX: 1,
+    scaleY: 1,
     centerX: 0,
     centerY: 0,
     angle: 0,
@@ -49,6 +53,8 @@ export abstract class Elem2D {
   protected z: number;
   protected width: number;
   protected height: number;
+  protected scaleX: number;
+  protected scaleY: number;
   protected centerX: number;
   protected centerY: number;
   protected angleDeg: number;
@@ -72,6 +78,8 @@ export abstract class Elem2D {
     this.z = opt.z;
     this.width = opt.width;
     this.height = opt.height;
+    this.scaleX = opt.scaleX;
+    this.scaleY = opt.scaleY;
     this.centerX = opt.centerX;
     this.centerY = opt.centerY;
     this.angleDeg = opt.angle;
@@ -109,10 +117,29 @@ export abstract class Elem2D {
   }
 
   public setAngle(degrees: number): void {
-    let deg = normalizeAngle(degrees);
+    const deg = normalizeAngle(degrees);
     if (this.angleDeg === deg) return;
 
     this.angleDeg = deg;
+    this.dirty = true;
+  }
+
+  public scale(scale: number): void;
+
+  public scale(scaleX: number, scaleY: number): void;
+
+  public scale(scaleX: number, scaleY?: number): void {
+    this.setScale(this.scaleX * scaleX, this.scaleY * scaleY!);
+  }
+
+  public setScale(scale: number): void;
+
+  public setScale(scaleX: number, scaleY: number): void;
+
+  public setScale(scaleX: number, scaleY?: number): void {
+    this.scaleX = scaleX;
+    this.scaleY = isNaN(scaleY!) ? scaleX : scaleY!;
+
     this.dirty = true;
   }
 
@@ -146,12 +173,23 @@ export abstract class Elem2D {
 
   private applyLocalTransform(): void {
     this.updateValues();
-    const { ctx, x, y, centerX, centerY, alpha, angleRad } = this;
+    const {
+      ctx,
+      x,
+      y,
+      scaleX,
+      scaleY,
+      centerX,
+      centerY,
+      alpha,
+      angleRad,
+    } = this;
 
     ctx.globalAlpha = alpha;
     ctx.translate(x, y);
     ctx.rotate(angleRad);
     ctx.translate(-centerX, -centerY);
+    ctx.scale(scaleX, scaleY);
   }
 
   private updateValues(): void {
