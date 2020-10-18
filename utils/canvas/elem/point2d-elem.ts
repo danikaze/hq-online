@@ -1,5 +1,7 @@
 import { Elem2D, Elem2dOptions } from '.';
+import { drawRect } from '../draw-rect';
 import { ShapeStyle } from '../interfaces';
+import { setCtxStyle } from '../set-ctx-style';
 
 export interface TestElemOptions
   extends Omit<Elem2dOptions, 'centerX' | 'centerY'> {
@@ -34,13 +36,8 @@ export class Point2dElem extends Elem2D {
   }
 
   protected drawElem(): void {
-    const { ctx, width, height, style } = this;
-
-    ctx.globalAlpha = style.strokeAlpha;
-    ctx.strokeStyle = style.strokeStyle;
-    ctx.strokeRect(0, 0, width, height);
-    ctx.globalAlpha = style.fillAlpha;
-    ctx.fillStyle = style.fillStyle;
-    ctx.fillRect(0, 0, width, height);
+    const { ctx, style, width, height } = this;
+    setCtxStyle(ctx, style);
+    drawRect(ctx, style.fillAlpha!, style.strokeAlpha!, 0, 0, width, height);
   }
 }

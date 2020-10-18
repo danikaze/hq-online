@@ -1,6 +1,7 @@
 import { deg2rad, normalizeAngle } from '@utils/trigonometry';
 import clamp from 'clamp';
 import { extendObjectsOnly } from 'extend-objects-only';
+import { drawShape } from '../draw-shape.ts';
 import {
   Centerable,
   Rect2D,
@@ -9,9 +10,10 @@ import {
   Transparentable,
   ZSortable,
 } from '../interfaces';
+import { setCtxStyle } from '../set-ctx-style';
 
-export type Elem2dOptions = Partial<Options>;
-type Options = Rect2D &
+export type Elem2dOptions = Partial<RequiredOptions>;
+export type RequiredOptions = Rect2D &
   ZSortable &
   Rotatable &
   Centerable &
@@ -20,7 +22,7 @@ type Options = Rect2D &
   };
 
 export abstract class Elem2D {
-  public static readonly defaultOptions: Elem2dOptions = {
+  public static readonly defaultOptions: RequiredOptions = {
     x: 0,
     y: 0,
     z: 0,
@@ -30,6 +32,7 @@ export abstract class Elem2D {
     centerY: 0,
     angle: 0,
     alpha: 1.0,
+    outlineStyle: {},
   };
 
   public static readonly outlineStyle: ShapeStyle = {
@@ -37,7 +40,7 @@ export abstract class Elem2D {
     fillAlpha: 0.5,
     strokeStyle: 'red',
     strokeAlpha: 1.0,
-    strokeWidth: 3.0,
+    lineWidth: 3.0,
   };
 
   protected ctx: CanvasRenderingContext2D;
@@ -58,11 +61,11 @@ export abstract class Elem2D {
 
   constructor(ctx: CanvasRenderingContext2D, options?: Elem2dOptions) {
     this.ctx = ctx;
-    const opt = extendObjectsOnly<Options>(
+    const opt = extendObjectsOnly(
       {},
       Elem2D.defaultOptions,
       options
-    ) as Options;
+    ) as RequiredOptions;
 
     this.x = opt.x;
     this.y = opt.y;
@@ -87,18 +90,10 @@ export abstract class Elem2D {
     this.applyLocalTransform();
 
     this.drawElem();
-    outline && this.drawShape();
+    outline && this.drawOutline();
 
     this.ctx.restore();
   }
-
-  /**
-   * Drawing an specific element should always considers 0,0 as the
-   * position of the element
-   * Therefor, the implementation of this method doesn't need to
-   * use `x`, `y` nor `centerX`, `centerY`
-   */
-  protected abstract drawElem(): void;
 
   public move(dx: number, dy: number): void {
     this.setPosition(this.x + dx, this.y + dy);
@@ -134,17 +129,20 @@ export abstract class Elem2D {
     return inside;
   }
 
-  private drawShape(): void {
-    const { ctx, outlineStyle, shape } = this;
+  protected drawOutline(): void {
+    const { ctx, shape, outlineStyle } = this;
 
-    ctx.globalAlpha = outlineStyle.fillAlpha;
-    ctx.fillStyle = outlineStyle.fillStyle;
-    ctx.fill(shape);
-    ctx.lineWidth = outlineStyle.strokeWidth;
-    ctx.globalAlpha = outlineStyle.strokeAlpha;
-    ctx.strokeStyle = outlineStyle.strokeStyle;
-    ctx.stroke(shape);
+    setCtxStyle(ctx, outlineStyle);
+    drawShape(ctx, outlineStyle.fillAlpha!, outlineStyle.strokeAlpha!, shape);
   }
+
+  /**
+   * Drawing an specific element should always considers 0,0 as the
+   * position of the element
+   * Therefor, the implementation of this method doesn't need to
+   * use `x`, `y` nor `centerX`, `centerY`
+   */
+  protected abstract drawElem(): void;
 
   private applyLocalTransform(): void {
     this.updateValues();
