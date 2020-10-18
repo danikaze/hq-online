@@ -12,7 +12,7 @@ export class Point2dElem extends Elem2D {
     fillAlpha: 1,
     strokeStyle: 'black',
     strokeAlpha: 1,
-    strokeWidth: 3,
+    lineWidth: 3,
   };
 
   private readonly style: ShapeStyle;

@@ -29,10 +29,25 @@ export interface Bounds2D {
   right: number;
 }
 
-export interface ShapeStyle {
-  fillStyle: string;
-  fillAlpha: number;
-  strokeStyle: string;
-  strokeAlpha: number;
-  strokeWidth: number;
-}
+export type CtxStyle = {
+  alpha?: number;
+  // compositeOperation: string;
+  // filter: string;
+  lineCap?: CanvasLineCap;
+  lineDashOffset?: number;
+  lineJoin?: CanvasLineJoin;
+  lineWidth?: number;
+  lineDash?: number[];
+  // miterLimit: number;
+  // shadowBlur: number;
+  // shadowColor: string;
+  // shadowOffsetX: number;
+  // shadowOffsetY: number;
+  fillStyle?: string | CanvasGradient | CanvasPattern;
+  strokeStyle?: string | CanvasGradient | CanvasPattern;
+};
+
+export type ShapeStyle = Omit<CtxStyle, 'alpha'> & {
+  fillAlpha?: number;
+  strokeAlpha?: number;
+};
