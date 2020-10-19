@@ -1,10 +1,10 @@
 // tslint:disable: no-any no-magic-numbers
 import { drawShape } from '@utils/canvas/draw-shape.ts';
-import { Point2dElem } from '@utils/canvas/elem/point2d-elem';
 import { TestElem } from '@utils/canvas/elem/test-elem';
 import { InfinityGrid } from '@utils/canvas/infinity-grid';
 import { setCtxStyle } from '@utils/canvas/set-ctx-style';
 import { Viewport2D } from '@utils/canvas/viewport-2d';
+import { KeyboardInput, KeyInputEvent } from '@utils/input/keyboard';
 import {
   MouseInput,
   MouseInputButtonEvent,
@@ -21,6 +21,7 @@ const logger = getLogger('map test');
 let viewport: Viewport2D;
 let testElem: TestElem;
 let grid: InfinityGrid;
+let kbInput: KeyboardInput;
 let mouseInput: MouseInput;
 let draggingShape: Path2D | undefined;
 
@@ -50,14 +51,15 @@ export function initMap(
   (window as any).testElem = testElem;
   (window as any).draw = draw;
 
-  mouseInput = new MouseInput(canvas);
+  kbInput = new KeyboardInput();
+  kbInput.on('press', onKeyPress);
 
+  mouseInput = new MouseInput(canvas);
   mouseInput.on('click', onClick);
   mouseInput.on('dragStart', onDrag);
   mouseInput.on('dragMove', onDrag);
   mouseInput.on('dragEnd', onDrag);
   mouseInput.on('wheel', onWheel);
-  document.addEventListener('keydown', onKeyDown);
 
   draw();
 }
@@ -74,10 +76,10 @@ export function clearMap(canvas: HTMLCanvasElement): void {
   mouseInput.off('dragMove', onDrag);
   mouseInput.off('dragEnd', onDrag);
   mouseInput.off('wheel', onWheel);
-  document.removeEventListener('keydown', onKeyDown);
+  kbInput.off('press', onKeyPress);
 }
 
-function onKeyDown(ev: KeyboardEvent): void {
+function onKeyPress(ev: KeyInputEvent): void {
   let change = false;
   const key = ev.key.toLowerCase();
 
@@ -124,7 +126,6 @@ function onKeyDown(ev: KeyboardEvent): void {
 }
 
 function onClick(ev: MouseInputButtonEvent): void {
-  const { ctx } = viewport;
   const { x, y } = viewport.getWorldPoint(ev.x, ev.y);
   const canvasPoint = viewport.getCanvasPoint(x, y);
   const isInside = testElem.isCanvasPointInside(canvasPoint.x, canvasPoint.y);
@@ -134,16 +135,6 @@ function onClick(ev: MouseInputButtonEvent): void {
       2
     )}, ${y.toFixed(2)}) => canvas(${canvasPoint.x}, ${canvasPoint.y})`
   );
-  const point = new Point2dElem(ctx, {
-    x,
-    y,
-    style: {
-      fillStyle: isInside ? 'red' : 'yellow',
-      strokeStyle: isInside ? '#550000' : 'black',
-    },
-  });
-  // point.draw();
-
   drawCanvasPoint(canvasPoint.x, canvasPoint.y);
 }
 
@@ -154,8 +145,13 @@ function onDrag(ev: MouseInputDragEvent): void {
     return;
   }
 
+  const { dragX, dragY } = ev;
+  const absX = Math.abs(dragX);
+  const absY = Math.abs(dragY);
+  const w = ev.shiftKey ? Math.sign(dragX) * Math.max(absX, absY) : dragX;
+  const h = ev.shiftKey ? Math.sign(dragY) * Math.max(absX, absY) : dragY;
   draggingShape = new Path2D();
-  draggingShape.rect(ev.clickX, ev.clickY, ev.dragX, ev.dragY);
+  draggingShape.rect(ev.clickX, ev.clickY, w, h);
   draw();
 }
 
