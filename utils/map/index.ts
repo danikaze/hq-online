@@ -1,16 +1,28 @@
 // tslint:disable: no-any no-magic-numbers
+import { drawShape } from '@utils/canvas/draw-shape.ts';
 import { Point2dElem } from '@utils/canvas/elem/point2d-elem';
 import { TestElem } from '@utils/canvas/elem/test-elem';
-import { TransformDecoratorElem } from '@utils/canvas/elem/transform-decorator';
 import { InfinityGrid } from '@utils/canvas/infinity-grid';
+import { setCtxStyle } from '@utils/canvas/set-ctx-style';
 import { Viewport2D } from '@utils/canvas/viewport-2d';
+import {
+  MouseInput,
+  MouseInputButtonEvent,
+  MouseInputDragEvent,
+  MouseInputWheelEvent,
+} from '@utils/input/mouse';
 import { getLogger } from '@utils/logger';
+
+const MOVE_SPEED = 25;
+const ZOOM_SPEED = 0.5;
+const ROTATION_SPEED = 15;
 
 const logger = getLogger('map test');
 let viewport: Viewport2D;
 let testElem: TestElem;
-let transformDecorator: TransformDecoratorElem;
 let grid: InfinityGrid;
+let mouseInput: MouseInput;
+let draggingShape: Path2D | undefined;
 
 export function initMap(
   canvas: HTMLCanvasElement,
@@ -32,15 +44,19 @@ export function initMap(
   grid = new InfinityGrid(viewport);
 
   testElem = new TestElem(ctx, { x: 50, y: 50, angle: 45, alpha: 1.0 });
-  transformDecorator = new TransformDecoratorElem(ctx, testElem);
 
   (window as any).ctx = ctx;
   (window as any).viewport = viewport;
   (window as any).testElem = testElem;
-  (window as any).transformDecorator = transformDecorator;
   (window as any).draw = draw;
 
-  canvas.addEventListener('click', onClick);
+  mouseInput = new MouseInput(canvas);
+
+  mouseInput.on('click', onClick);
+  mouseInput.on('dragStart', onDrag);
+  mouseInput.on('dragMove', onDrag);
+  mouseInput.on('dragEnd', onDrag);
+  mouseInput.on('wheel', onWheel);
   document.addEventListener('keydown', onKeyDown);
 
   draw();
@@ -53,14 +69,15 @@ export function resizeMap(width: number, height: number): void {
 }
 
 export function clearMap(canvas: HTMLCanvasElement): void {
-  canvas.removeEventListener('click', onClick);
+  mouseInput.off('click', onClick);
+  mouseInput.off('dragStart', onDrag);
+  mouseInput.off('dragMove', onDrag);
+  mouseInput.off('dragEnd', onDrag);
+  mouseInput.off('wheel', onWheel);
   document.removeEventListener('keydown', onKeyDown);
 }
 
 function onKeyDown(ev: KeyboardEvent): void {
-  const MOVE_SPEED = 25;
-  const ZOOM_SPEED = 0.5;
-  const ROTATION_SPEED = 15;
   let change = false;
   const key = ev.key.toLowerCase();
 
@@ -106,18 +123,16 @@ function onKeyDown(ev: KeyboardEvent): void {
   }
 }
 
-function onClick(ev: MouseEvent): void {
+function onClick(ev: MouseInputButtonEvent): void {
   const { ctx } = viewport;
-  const { x, y } = viewport.getWorldPoint(ev.clientX, ev.clientY);
+  const { x, y } = viewport.getWorldPoint(ev.x, ev.y);
   const canvasPoint = viewport.getCanvasPoint(x, y);
   const isInside = testElem.isCanvasPointInside(canvasPoint.x, canvasPoint.y);
 
   logger.debug(
-    `[${isInside ? 'in' : 'out'}] canvas(${ev.clientX}, ${
-      ev.clientY
-    }) => world(${x.toFixed(2)}, ${y.toFixed(2)}) => canvas(${canvasPoint.x}, ${
-      canvasPoint.y
-    })`
+    `[${isInside ? 'in' : 'out'}] canvas(${ev.x}, ${ev.y}) => world(${x.toFixed(
+      2
+    )}, ${y.toFixed(2)}) => canvas(${canvasPoint.x}, ${canvasPoint.y})`
   );
   const point = new Point2dElem(ctx, {
     x,
@@ -127,9 +142,27 @@ function onClick(ev: MouseEvent): void {
       strokeStyle: isInside ? '#550000' : 'black',
     },
   });
-  point.draw();
+  // point.draw();
 
   drawCanvasPoint(canvasPoint.x, canvasPoint.y);
+}
+
+function onDrag(ev: MouseInputDragEvent): void {
+  if (ev.type === 'dragEnd') {
+    draggingShape = undefined;
+    draw();
+    return;
+  }
+
+  draggingShape = new Path2D();
+  draggingShape.rect(ev.clickX, ev.clickY, ev.dragX, ev.dragY);
+  draw();
+}
+
+function onWheel(ev: MouseInputWheelEvent): void {
+  const { x, y } = viewport.getWorldPoint(ev.x, ev.y);
+  viewport.increaseZoom(-ZOOM_SPEED * Math.sign(ev.deltaY), x, y);
+  draw();
 }
 
 function drawCanvasPoint(canvasX: number, canvasY: number): void {
@@ -145,10 +178,24 @@ function drawCanvasPoint(canvasX: number, canvasY: number): void {
 }
 
 function draw(outline?: boolean) {
+  const { ctx } = viewport;
+
   viewport.clear();
   grid.draw();
   testElem.draw(outline);
-  transformDecorator.draw();
+
+  if (!draggingShape) return;
+
+  ctx.save();
+  ctx.resetTransform();
+  setCtxStyle(ctx, {
+    fillStyle: 'red',
+    strokeStyle: 'red',
+    lineDash: [],
+    lineWidth: 1,
+  });
+  drawShape(ctx, 0.2, 1, draggingShape);
+  ctx.restore();
 }
 
 if (!IS_SERVER) {
