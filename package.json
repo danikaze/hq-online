@@ -27,6 +27,7 @@
     "clsx": "^1.1.1",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.5",
+    "eventemitter3": "^4.0.7",
     "express": "^4.17.1",
     "extend-objects-only": "^1.0.2",
     "next": "9.5.3",
